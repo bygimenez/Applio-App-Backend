@@ -1,6 +1,6 @@
 # Applio APP (Backend)
 
-This is the backend of the Applio APP, powered by Flask and [RVC-CLI](https://github.com/blaise-io/rvc) from **blaisewf** for voice processing. If you're interested in contributing to the project or exploring its functionality, follow the instructions below.
+This is the backend of the Applio APP, powered by Flask and [RVC-CLI](https://github.com/blaise-wf/rvc-cli) from **blaisewf** for voice processing. If you're interested in contributing to the project or exploring its functionality, follow the instructions below.
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ python server.py
 
 ## Running the Frontend
 
-For frontend development, refer to the [Applio APP Frontend](https://github.com/bygimenez/applio-app-frontend) repository.
+For frontend development, refer to the [Applio APP Frontend](https://github.com/bygimenez/applio-app) repository.
 
 ## Contributing
 

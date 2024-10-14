@@ -1,4 +1,9 @@
-# Applio APP (Backend)
+![APP Screenshot](https://i.imgur.com/RSFLuaL.png)
+<p align="center">
+  The easiest voice cloning tool, now in app. Made to be simple, fast and light.
+</p>
+
+# Backend
 
 This is the backend of the Applio APP, powered by Flask and [RVC-CLI](https://github.com/blaise-wf/rvc-cli) from **blaisewf** for voice processing. If you're interested in contributing to the project or exploring its functionality, follow the instructions below.
 

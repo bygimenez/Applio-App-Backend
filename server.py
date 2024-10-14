@@ -155,8 +155,27 @@ def runInstallation():
         yield f'data: Error running installation: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running installation: {str(e)}"))
 
+# get latest downloaded model
+def get_latest_files(directory):
+    model_files = {"pth": None, "index": None}
+
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.pth'):
+                model_files["pth"] = os.path.join(root, file)
+            elif file.endswith('.index'):
+                model_files["index"] = os.path.join(root, file)
+
+    logging.info(f"Model .pth file found: {model_files['pth']}")
+    logging.info(f"Model .index file found: {model_files['index']}")
+
+    if not model_files["pth"] or not model_files["index"]:
+        return None
+
+    return model_files
+
 # download model
-def downloadModel(modelLink):
+def downloadModel(modelLink, model_id):
     command = [os.path.join("env", "python.exe"), "rvc_cli.py", "download", "--model_link", f'"{modelLink}"']
     command_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc'))
 
@@ -184,13 +203,52 @@ def downloadModel(modelLink):
         process.stdout.close()
         process.wait()
 
+        logs_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc', 'logs'))
+        logging.info(f"Logs directory: {logs_dir}")
+
+        model_files = get_latest_files(logs_dir)
+        if model_files:
+            model_folder_path = os.path.dirname(model_files["pth"])
+
+            model_info = {
+                "link": modelLink,
+                "model_folder_path": model_folder_path,
+                "model_pth_file": model_files["pth"],
+                "model_index_file": model_files["index"]
+            }
+
+            json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'logs', 'models'))
+            logging.info(f"Attempting to create directory: {json_logs_dir}")
+
+            try:
+                if not os.path.exists(json_logs_dir):
+                    os.makedirs(json_logs_dir)
+                    logging.info(f"Created directory: {json_logs_dir}")
+                else:
+                    logging.info(f"Directory already exists: {json_logs_dir}")
+            except OSError as e:
+                logging.error(f"Error creating directory {json_logs_dir}: {str(e)}")
+                yield f'data: Error creating directory {json_logs_dir}: {str(e)}\n\n'
+                return
+
+            log_file_path = os.path.join(json_logs_dir, f'{model_id}.json')
+            logging.info(f"Saving model info to: {log_file_path}")
+
+            with open(log_file_path, 'w') as log_file:
+                json.dump(model_info, log_file, indent=4)
+
+            yield f'data: Model info saved in {log_file_path}.\n\n'
+            logging.info(remove_ansi_escape_sequences(f"Model info saved in {log_file_path}."))
+        else:
+            yield 'data: Error: No .pth or .index file found in the logs folder.\n\n'
+            logging.error(remove_ansi_escape_sequences("No .pth or .index file found in the logs folder."))
+
         yield 'data: Model downloaded successfully.\n\n'
         logging.info(remove_ansi_escape_sequences("Model downloaded successfully."))
 
     except Exception as e:
         yield f'data: Error running download: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running download: {str(e)}"))
-
 
 
 @app.route('/')
@@ -211,12 +269,13 @@ def check_update():
 @app.route('/download', methods=['GET'])
 def download_model():
     model_link = request.args.get('link')
+    model_id = request.args.get('id')
     logging.info(remove_ansi_escape_sequences(f"model_link: {model_link}"))
     if not model_link:
         logging.error(remove_ansi_escape_sequences("Error: model link argument is missing."))
         return Response("Error: model link argument is missing.", status=400)
     
-    return Response(downloadModel(model_link), content_type='text/event-stream')
+    return Response(downloadModel(model_link, model_id), content_type='text/event-stream')
 
 
 if __name__ == "__main__":

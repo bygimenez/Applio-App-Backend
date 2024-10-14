@@ -55,4 +55,3 @@ We welcome contributions! Please follow the standard GitHub flow: fork the repos
 ---
 
 For any questions or issues, feel free to open an issue in the repository or reach out to the project maintainers.
-```

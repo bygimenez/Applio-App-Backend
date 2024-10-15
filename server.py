@@ -13,7 +13,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["http://localhost:1420", "http://tauri.localhost"]}})
 
 # define logs
-log_directory = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'logs'))
+log_directory = os.path.abspath(os.path.join(os.getcwd(), 'python', 'logs'))
 log_file = os.path.join(log_directory, 'server_log.log')
 
 # create log directory if it doesn't exist
@@ -42,7 +42,7 @@ def get_latest_commit_hash():
 
 # save last commit hash to version.json
 def save_commit_info(commit_hash):
-    version_file_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'version.json'))
+    version_file_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'version.json'))
     logging.info(f"Saving commit {commit_hash} to {version_file_path}")
     with open(version_file_path, 'w') as version_file:
         json.dump({'commit_hash': commit_hash}, version_file)
@@ -50,7 +50,7 @@ def save_commit_info(commit_hash):
 
 # load last commit hash from version.json
 def load_commit_info():
-    version_file_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'version.json'))
+    version_file_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'version.json'))
     logging.info(f"Loading commit info from {version_file_path}")
     if not os.path.exists(version_file_path):
         logging.info("No commit info found. Downloading RVC repository from GitHub...")
@@ -70,7 +70,7 @@ def checkUpdate():
 
 # download RVC repository from GitHub and extract it
 def downloadRepo():
-    extraction_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python'))
+    extraction_path = os.path.abspath(os.path.join(os.getcwd(), 'python'))
     new_folder_name = os.path.join(extraction_path, 'rvc')
 
     latest_commit_hash = get_latest_commit_hash()
@@ -125,7 +125,7 @@ def downloadRepo():
 
 # run RVC installation
 def runInstallation():
-    bat_file_path = os.path.join(os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc')), 'install.bat')
+    bat_file_path = os.path.join(os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc')), 'install.bat')
 
     yield 'data: Downloading requeriments...\n\n'
     logging.info(remove_ansi_escape_sequences("Downloading requeriments..."))
@@ -138,7 +138,7 @@ def runInstallation():
             text=True,
             bufsize=1,
             shell=True,
-            cwd=os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc'))
+            cwd=os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
         )
 
         for line in process.stdout:
@@ -177,7 +177,7 @@ def get_latest_files(directory):
 # download model
 def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name):
     command = [os.path.join("env", "python.exe"), "rvc_cli.py", "download", "--model_link", f'"{modelLink}"']
-    command_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc'))
+    command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
 
     logging.info(remove_ansi_escape_sequences(f"command: {' '.join(command)}"))
     logging.info(remove_ansi_escape_sequences(f"command_path: {command_path}"))
@@ -203,7 +203,7 @@ def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name
         process.stdout.close()
         process.wait()
 
-        logs_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc', 'logs'))
+        logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc', 'logs'))
         logging.info(f"Logs directory: {logs_dir}")
 
         model_files = get_latest_files(logs_dir)
@@ -221,7 +221,7 @@ def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name
                 "model_index_file": model_files["index"]
             }
 
-            json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'logs', 'models'))
+            json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'logs', 'models'))
             logging.info(f"Attempting to create directory: {json_logs_dir}")
 
             try:
@@ -256,7 +256,7 @@ def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name
 
 # get models
 def get_models():
-    json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'logs', 'models'))
+    json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'logs', 'models'))
 
     json_files = []
 
@@ -275,7 +275,7 @@ def get_models():
 
 # upload audio
 def upload_audio():
-    audios_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'audios', 'input'))
+    audios_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'audios', 'input'))
 
     os.makedirs(audios_dir, exist_ok=True)
 
@@ -294,12 +294,12 @@ def upload_audio():
 
 # convert
 def convert(input_path, pth_path, index_path):
-    output_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'audios', 'output'))
+    output_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'audios', 'output'))
     os.makedirs(output_path, exist_ok=True)
     audio_path = os.path.join(output_path, 'audio.wav')
 
     command = [os.path.join("env", "python.exe"), "rvc_cli.py", "infer", "--pitch", "5", "--input_path", f'"{input_path}"', "--output_path", f'"{audio_path}"', "--pth_path", f'"{pth_path}"', "--index_path", f'"{index_path}"']
-    command_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc'))
+    command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
 
     logging.info(remove_ansi_escape_sequences(f"command: {' '.join(command)}"))
     logging.info(remove_ansi_escape_sequences(f"command_path: {command_path}"))

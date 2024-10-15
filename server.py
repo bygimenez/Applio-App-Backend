@@ -175,7 +175,7 @@ def get_latest_files(directory):
     return model_files
 
 # download model
-def downloadModel(modelLink, model_id):
+def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name):
     command = [os.path.join("env", "python.exe"), "rvc_cli.py", "download", "--model_link", f'"{modelLink}"']
     command_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc'))
 
@@ -211,6 +211,10 @@ def downloadModel(modelLink, model_id):
             model_folder_path = os.path.dirname(model_files["pth"])
 
             model_info = {
+                "id": model_id,
+                "name": model_name,
+                "epochs": model_epochs,
+                "algorithm": model_algorithm,
                 "link": modelLink,
                 "model_folder_path": model_folder_path,
                 "model_pth_file": model_files["pth"],
@@ -250,6 +254,81 @@ def downloadModel(modelLink, model_id):
         yield f'data: Error running download: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running download: {str(e)}"))
 
+# get models
+def get_models():
+    json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'logs', 'models'))
+
+    json_files = []
+
+    for file_name in os.listdir(json_logs_dir):
+        if file_name.endswith('.json'):
+            file_path = os.path.join(json_logs_dir, file_name)
+            
+            with open(file_path, 'r', encoding='utf-8') as json_file:
+                try:
+                    content = json.load(json_file) 
+                    json_files.append(content) 
+                except json.JSONDecodeError as e:
+                    print(f"error reading {file_name}: {e}")
+
+    return json_files
+
+# upload audio
+def upload_audio():
+    audios_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'audios', 'input'))
+
+    os.makedirs(audios_dir, exist_ok=True)
+
+    if 'audio' not in request.files:
+        return {'error': 'No file part'}, 400
+
+    file = request.files['audio']
+    
+    if file.filename == '':
+        return {'error': 'No selected file'}, 400
+
+    file_path = os.path.join(audios_dir, file.filename)
+    file.save(file_path)
+
+    return {'message': 'File uploaded successfully', 'file_path': file_path}, 200
+
+# convert
+def convert(input_path, pth_path, index_path):
+    output_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'audios', 'output'))
+    os.makedirs(output_path, exist_ok=True)
+    audio_path = os.path.join(output_path, 'audio.wav')
+
+    command = [os.path.join("env", "python.exe"), "rvc_cli.py", "infer", "--pitch", "5", "--input_path", f'"{input_path}"', "--output_path", f'"{audio_path}"', "--pth_path", f'"{pth_path}"', "--index_path", f'"{index_path}"']
+    command_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'rvc'))
+
+    logging.info(remove_ansi_escape_sequences(f"command: {' '.join(command)}"))
+    logging.info(remove_ansi_escape_sequences(f"command_path: {command_path}"))
+
+    yield 'data: Starting conversion...\n\n'
+    logging.info(remove_ansi_escape_sequences("Starting conversion..."))
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            shell=True,
+            cwd=command_path
+        )
+
+        for line in process.stdout:
+            yield f'data: {line}\n\n'
+            logging.info(line.strip())
+
+        process.stdout.close()
+        process.wait()
+
+    except Exception as e:
+        yield f'data: Error running conversion: {str(e)}\n\n'
+        logging.error(remove_ansi_escape_sequences(f"Error running conversion: {str(e)}"))
+
 
 @app.route('/')
 def home():
@@ -268,14 +347,43 @@ def check_update():
 
 @app.route('/download', methods=['GET'])
 def download_model():
+    model_name = request.args.get('name')
     model_link = request.args.get('link')
     model_id = request.args.get('id')
+    model_epochs = request.args.get('epochs')
+    model_algorithm = request.args.get('algorithm')
     logging.info(remove_ansi_escape_sequences(f"model_link: {model_link}"))
     if not model_link:
         logging.error(remove_ansi_escape_sequences("Error: model link argument is missing."))
         return Response("Error: model link argument is missing.", status=400)
     
-    return Response(downloadModel(model_link, model_id), content_type='text/event-stream')
+    return Response(downloadModel(model_link, model_id, model_epochs, model_algorithm, model_name), content_type='text/event-stream')
+
+@app.route('/get-models', methods=['GET'])
+def get_all_models():
+    logging.info(remove_ansi_escape_sequences("Getting all models..."))
+    models = get_models()
+    
+    return jsonify(models), 200
+
+@app.route('/upload', methods=["POST"])
+def upload():
+    logging.info(remove_ansi_escape_sequences("Getting audio..."))
+    audios = upload_audio()
+
+    return jsonify(audios), 200
+
+@app.route('/convert', methods=["GET"])
+def convert_audio():
+    input_path = request.args.get('input')
+    pth_path = request.args.get('pth')
+    index_path = request.args.get('index')
+    logging.info(remove_ansi_escape_sequences('Getting conversion info...'))
+    if not input_path or not pth_path or not index_path:
+        logging.error(remove_ansi_escape_sequences("Error: arguments missing."))
+        return Response("Error: arguments missing", status=400)
+    
+    return Response(convert(input_path, pth_path, index_path), content_type='text/event-stream')
 
 
 if __name__ == "__main__":

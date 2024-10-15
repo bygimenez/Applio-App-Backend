@@ -10,7 +10,7 @@ import subprocess
 import json
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:1420"}})
+CORS(app, resources={r"/*": {"origins": ["http://localhost:1420", "http://tauri.localhost"]}})
 
 # define logs
 log_directory = os.path.abspath(os.path.join(os.getcwd(), '..', 'python', 'logs'))

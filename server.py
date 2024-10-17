@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, send_file
 from flask_cors import CORS
 import os
 import requests
@@ -10,7 +10,7 @@ import subprocess
 import json
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["http://localhost:1420", "http://tauri.localhost"]}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # define logs
 log_directory = os.path.abspath(os.path.join(os.getcwd(), 'python', 'logs'))
@@ -298,7 +298,15 @@ def convert(input_path, pth_path, index_path):
     os.makedirs(output_path, exist_ok=True)
     audio_path = os.path.join(output_path, 'audio.wav')
 
-    command = [os.path.join("env", "python.exe"), "rvc_cli.py", "infer", "--pitch", "5", "--input_path", f'"{input_path}"', "--output_path", f'"{audio_path}"', "--pth_path", f'"{pth_path}"', "--index_path", f'"{index_path}"']
+    command = [
+    os.path.join("env", "python.exe"), 
+    "rvc_cli.py", 
+    "infer", 
+    "--input_path", input_path, 
+    "--output_path", audio_path, 
+    "--pth_path", pth_path, 
+    "--index_path", index_path
+]
     command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
 
     logging.info(remove_ansi_escape_sequences(f"command: {' '.join(command)}"))
@@ -324,6 +332,8 @@ def convert(input_path, pth_path, index_path):
 
         process.stdout.close()
         process.wait()
+
+        yield f'data: Conversion finished. Audio path: {audio_path}\n\n'
 
     except Exception as e:
         yield f'data: Error running conversion: {str(e)}\n\n'
@@ -385,6 +395,10 @@ def convert_audio():
     
     return Response(convert(input_path, pth_path, index_path), content_type='text/event-stream')
 
+@app.route('/audio', methods=["GET"])
+def get_audio():
+    audio_path = request.args.get('path')
+    return send_file(audio_path, mimetype='audio/wav')
 
 if __name__ == "__main__":
     logging.info(remove_ansi_escape_sequences("Server started at: http://127.0.0.1:5123"))

@@ -157,11 +157,15 @@ def runInstallation():
 
 # download requisites
 def downloadRequisites():
-    command = [os.path.join("env", "python.exe"), "rvc_cli.py", "prerequisites"]
+    command = ["env\python rvc_cli.py prerequisites"]
     command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
 
-    yield 'data: Downloading requirements...\n\n'
-    logging.info(remove_ansi_escape_sequences("Downloading requirements..."))
+    logging.info(remove_ansi_escape_sequences(f"command: {' '.join(command)}"))
+    logging.info(remove_ansi_escape_sequences(f"command_path: {command_path}"))
+
+    yield 'data: Downloading pretraineds...\n\n'
+    logging.info(remove_ansi_escape_sequences("Downloading pretraineds..."))
+    print(command_path)
 
     try:
         process = subprocess.Popen(
@@ -176,17 +180,17 @@ def downloadRequisites():
 
         for line in process.stdout:
             yield f'data: {line}\n\n'
-            logging.info(line.strip())    
+            logging.info(line.strip())
 
         process.stdout.close()
-        process.kill()
+        process.wait()
 
-        yield 'data: Requirements downloaded successfully.\n\n'
-        logging.info(remove_ansi_escape_sequences("Requirements downloaded successfully."))
+        yield 'data: Pretraineds installed successfully.\n\n'
+        logging.info(remove_ansi_escape_sequences("Pretraineds installed successfully."))
 
     except Exception as e:
-        yield f'data: Error running download: {str(e)}\n\n'
-        logging.ERROR(remove_ansi_escape_sequences(f"Error running download: {str(e)}"))
+        yield f'data: Error executing command: {str(e)}\n\n'
+        logging.error(remove_ansi_escape_sequences(f"Error executing command: {str(e)}"))
 
 # get latest downloaded model
 def get_latest_files(directory):

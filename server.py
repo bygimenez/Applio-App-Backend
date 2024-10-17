@@ -86,7 +86,7 @@ def downloadRepo():
 
     yield 'data: Downloading RVC repository from GitHub...\n\n'
     
-    url = "https://github.com/blaisewf/rvc-cli/archive/refs/heads/main.zip"
+    url = "https://github.com/bygimenez/rvc-cli/archive/refs/heads/main.zip"
     logging.info(remove_ansi_escape_sequences("Downloading RVC repository from GitHub..."))
 
     try:
@@ -155,43 +155,6 @@ def runInstallation():
         yield f'data: Error running installation: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running installation: {str(e)}"))
 
-# download requisites
-def downloadRequisites():
-    command = ["env\python rvc_cli.py prerequisites"]
-    command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
-
-    logging.info(remove_ansi_escape_sequences(f"command: {' '.join(command)}"))
-    logging.info(remove_ansi_escape_sequences(f"command_path: {command_path}"))
-
-    yield 'data: Downloading pretraineds...\n\n'
-    logging.info(remove_ansi_escape_sequences("Downloading pretraineds..."))
-    print(command_path)
-
-    try:
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-            shell=True,
-            cwd=command_path
-        )
-
-        for line in process.stdout:
-            yield f'data: {line}\n\n'
-            logging.info(line.strip())
-
-        process.stdout.close()
-        process.wait()
-
-        yield 'data: Pretraineds installed successfully.\n\n'
-        logging.info(remove_ansi_escape_sequences("Pretraineds installed successfully."))
-
-    except Exception as e:
-        yield f'data: Error executing command: {str(e)}\n\n'
-        logging.error(remove_ansi_escape_sequences(f"Error executing command: {str(e)}"))
-
 # get latest downloaded model
 def get_latest_files(directory):
     model_files = {"pth": None, "index": None}
@@ -243,7 +206,7 @@ def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name
                 return 
 
         process.stdout.close()
-        process.wait()
+        process.kill()
 
         if process.returncode != 0:
             error_message = process.stderr.read()
@@ -388,7 +351,7 @@ def convert(input_path, pth_path, index_path, pitch, indexRate, filterRadius):
             logging.info(line.strip())
 
         process.stdout.close()
-        process.wait()
+        process.kill()
 
         yield f'data: Conversion finished. Audio path: {audio_path}\n\n'
 
@@ -406,10 +369,6 @@ def home():
 @app.route('/pre-install', methods=['GET'])
 def pre_install():
     return Response(downloadRepo(), content_type='text/event-stream')
-
-@app.route('/download-pretraineds', methods=['GET'])
-def download_pretraineds():
-    return Response(downloadRequisites(), content_type='text/event-stream')
 
 @app.route('/check-update', methods=['GET'])
 def check_update():

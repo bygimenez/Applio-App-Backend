@@ -127,8 +127,8 @@ def downloadRepo():
 def runInstallation():
     bat_file_path = os.path.join(os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc')), 'install.bat')
 
-    yield 'data: Downloading requeriments...\n\n'
-    logging.info(remove_ansi_escape_sequences("Downloading requeriments..."))
+    yield 'data: Starting installation...\n\n'
+    logging.info(remove_ansi_escape_sequences("Starting installation..."))
 
     try:
         process = subprocess.Popen(
@@ -146,7 +146,7 @@ def runInstallation():
             logging.info(line.strip())
 
         process.stdout.close()
-        process.wait()
+        process.kill()
 
         yield 'data: Installation completed successfully.\n\n'
         logging.info(remove_ansi_escape_sequences("Installation completed successfully."))
@@ -154,6 +154,39 @@ def runInstallation():
     except Exception as e:
         yield f'data: Error running installation: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running installation: {str(e)}"))
+
+# download requisites
+def downloadRequisites():
+    command = [os.path.join("env", "python.exe"), "rvc_cli.py", "prerequisites"]
+    command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
+
+    yield 'data: Downloading requirements...\n\n'
+    logging.info(remove_ansi_escape_sequences("Downloading requirements..."))
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            shell=True,
+            cwd=command_path
+        )
+
+        for line in process.stdout:
+            yield f'data: {line}\n\n'
+            logging.info(line.strip())    
+
+        process.stdout.close()
+        process.kill()
+
+        yield 'data: Requirements downloaded successfully.\n\n'
+        logging.info(remove_ansi_escape_sequences("Requirements downloaded successfully."))
+
+    except Exception as e:
+        yield f'data: Error running download: {str(e)}\n\n'
+        logging.ERROR(remove_ansi_escape_sequences(f"Error running download: {str(e)}"))
 
 # get latest downloaded model
 def get_latest_files(directory):
@@ -175,7 +208,7 @@ def get_latest_files(directory):
     return model_files
 
 # download model
-def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name):
+def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name, author, server):
     command = [os.path.join("env", "python.exe"), "rvc_cli.py", "download", "--model_link", f'"{modelLink}"']
     command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
 
@@ -200,52 +233,67 @@ def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name
             yield f'data: {line}\n\n'
             logging.info(line.strip())
 
+            if "error" in line.lower():
+                yield 'data: Error detected during download process. Stopping execution.\n\n'
+                logging.error("Error detected in download process.")
+                return 
+
         process.stdout.close()
         process.wait()
+
+        if process.returncode != 0:
+            error_message = process.stderr.read()
+            logging.error(f"Error downloading model: {error_message}")
+            yield 'data: Error downloading model.\n\n'
+            return 
 
         logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc', 'logs'))
         logging.info(f"Logs directory: {logs_dir}")
 
         model_files = get_latest_files(logs_dir)
-        if model_files:
-            model_folder_path = os.path.dirname(model_files["pth"])
 
-            model_info = {
-                "id": model_id,
-                "name": model_name,
-                "epochs": model_epochs,
-                "algorithm": model_algorithm,
-                "link": modelLink,
-                "model_folder_path": model_folder_path,
-                "model_pth_file": model_files["pth"],
-                "model_index_file": model_files["index"]
-            }
-
-            json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'logs', 'models'))
-            logging.info(f"Attempting to create directory: {json_logs_dir}")
-
-            try:
-                if not os.path.exists(json_logs_dir):
-                    os.makedirs(json_logs_dir)
-                    logging.info(f"Created directory: {json_logs_dir}")
-                else:
-                    logging.info(f"Directory already exists: {json_logs_dir}")
-            except OSError as e:
-                logging.error(f"Error creating directory {json_logs_dir}: {str(e)}")
-                yield f'data: Error creating directory {json_logs_dir}: {str(e)}\n\n'
-                return
-
-            log_file_path = os.path.join(json_logs_dir, f'{model_id}.json')
-            logging.info(f"Saving model info to: {log_file_path}")
-
-            with open(log_file_path, 'w') as log_file:
-                json.dump(model_info, log_file, indent=4)
-
-            yield f'data: Model info saved in {log_file_path}.\n\n'
-            logging.info(remove_ansi_escape_sequences(f"Model info saved in {log_file_path}."))
-        else:
+        if not model_files or not model_files.get("pth") or not model_files.get("index"):
             yield 'data: Error: No .pth or .index file found in the logs folder.\n\n'
             logging.error(remove_ansi_escape_sequences("No .pth or .index file found in the logs folder."))
+            return
+
+        model_folder_path = os.path.dirname(model_files["pth"])
+
+        model_info = {
+            "id": model_id,
+            "name": model_name,
+            "epochs": model_epochs,
+            "algorithm": model_algorithm,
+            "author": author,
+            "from": server,
+            "link": modelLink,
+            "model_folder_path": model_folder_path,
+            "model_pth_file": model_files["pth"],
+            "model_index_file": model_files["index"]
+        }
+
+        json_logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'python', 'logs', 'models'))
+        logging.info(f"Attempting to create directory: {json_logs_dir}")
+
+        try:
+            if not os.path.exists(json_logs_dir):
+                os.makedirs(json_logs_dir)
+                logging.info(f"Created directory: {json_logs_dir}")
+            else:
+                logging.info(f"Directory already exists: {json_logs_dir}")
+        except OSError as e:
+            logging.error(f"Error creating directory {json_logs_dir}: {str(e)}")
+            yield f'data: Error creating directory {json_logs_dir}: {str(e)}\n\n'
+            return
+
+        log_file_path = os.path.join(json_logs_dir, f'{model_id}.json')
+        logging.info(f"Saving model info to: {log_file_path}")
+
+        with open(log_file_path, 'w') as log_file:
+            json.dump(model_info, log_file, indent=4)
+
+        yield f'data: Model info saved in {log_file_path}.\n\n'
+        logging.info(remove_ansi_escape_sequences(f"Model info saved in {log_file_path}."))
 
         yield 'data: Model downloaded successfully.\n\n'
         logging.info(remove_ansi_escape_sequences("Model downloaded successfully."))
@@ -253,6 +301,8 @@ def downloadModel(modelLink, model_id, model_epochs, model_algorithm, model_name
     except Exception as e:
         yield f'data: Error running download: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running download: {str(e)}"))
+
+
 
 # get models
 def get_models():
@@ -293,7 +343,7 @@ def upload_audio():
     return {'message': 'File uploaded successfully', 'file_path': file_path}, 200
 
 # convert
-def convert(input_path, pth_path, index_path):
+def convert(input_path, pth_path, index_path, pitch, indexRate, filterRadius):
     output_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'audios', 'output'))
     os.makedirs(output_path, exist_ok=True)
     audio_path = os.path.join(output_path, 'audio.wav')
@@ -305,7 +355,10 @@ def convert(input_path, pth_path, index_path):
     "--input_path", input_path, 
     "--output_path", audio_path, 
     "--pth_path", pth_path, 
-    "--index_path", index_path
+    "--index_path", index_path,
+    "--pitch", pitch,
+    "--index_rate", indexRate,
+    "--filter_radius", filterRadius,
 ]
     command_path = os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc'))
 
@@ -350,6 +403,10 @@ def home():
 def pre_install():
     return Response(downloadRepo(), content_type='text/event-stream')
 
+@app.route('/download-pretraineds', methods=['GET'])
+def download_pretraineds():
+    return Response(downloadRequisites(), content_type='text/event-stream')
+
 @app.route('/check-update', methods=['GET'])
 def check_update():
     logging.info(remove_ansi_escape_sequences("Checking for updates..."))
@@ -362,12 +419,14 @@ def download_model():
     model_id = request.args.get('id')
     model_epochs = request.args.get('epochs')
     model_algorithm = request.args.get('algorithm')
+    author = request.args.get('author')
+    server = request.args.get('from')
     logging.info(remove_ansi_escape_sequences(f"model_link: {model_link}"))
     if not model_link:
         logging.error(remove_ansi_escape_sequences("Error: model link argument is missing."))
         return Response("Error: model link argument is missing.", status=400)
     
-    return Response(downloadModel(model_link, model_id, model_epochs, model_algorithm, model_name), content_type='text/event-stream')
+    return Response(downloadModel(model_link, model_id, model_epochs, model_algorithm, model_name, author, server), content_type='text/event-stream')
 
 @app.route('/get-models', methods=['GET'])
 def get_all_models():
@@ -388,12 +447,15 @@ def convert_audio():
     input_path = request.args.get('input')
     pth_path = request.args.get('pth')
     index_path = request.args.get('index')
+    pitch = request.args.get('pitch')
+    indexRate = request.args.get('indexRate')
+    filterRadius = request.args.get('filterRadius')
     logging.info(remove_ansi_escape_sequences('Getting conversion info...'))
-    if not input_path or not pth_path or not index_path:
+    if not input_path or not pth_path or not index_path or not pitch:
         logging.error(remove_ansi_escape_sequences("Error: arguments missing."))
         return Response("Error: arguments missing", status=400)
     
-    return Response(convert(input_path, pth_path, index_path), content_type='text/event-stream')
+    return Response(convert(input_path, pth_path, index_path, pitch, indexRate, filterRadius), content_type='text/event-stream')
 
 @app.route('/audio', methods=["GET"])
 def get_audio():

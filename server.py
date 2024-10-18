@@ -136,8 +136,6 @@ def downloadPretraineds():
     print(bat_file_path)
     yield 'data: Starting installation...\n\n'
 
-    sys.stdout.flush()
-    
     try:
         process = subprocess.Popen(
             command,
@@ -149,13 +147,10 @@ def downloadPretraineds():
             cwd=bat_file_path
         )
         
-        while True:
-            line = process.stdout.readline()
-            if not line:
-                break
-            yield f'data: {line}\n\n'
-            logging.info(f'data: {line}\n\n')
-            sys.stdout.flush()
+        for line in process.stdout:
+            if line: 
+                yield f'data: {line}\n\n'
+                logging.info(f'data: {line}\n\n')
         
         process.wait()  
         
@@ -166,8 +161,6 @@ def downloadPretraineds():
         
     except Exception as e:
         yield f'data: Error running installation: {str(e)}\n\n'
-
-    sys.stdout.flush()
 
 # run RVC installation
 def runInstallation():

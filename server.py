@@ -8,6 +8,7 @@ import logging
 import re
 import subprocess
 import json
+import sys
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -122,6 +123,49 @@ def downloadRepo():
     except OSError as e:
         logging.error(remove_ansi_escape_sequences(f"Error during extraction: {str(e)}"))
         yield 'data: Error during extraction.\n\n'
+
+def downloadPretraineds():
+    bat_file_path = os.path.join(os.path.abspath(os.path.join(os.getcwd(), 'python', 'rvc')))
+    command = [os.path.join("env", "python.exe"), "rvc_cli.py", "prerequisites"]
+    
+    logging.info(f'command: {command}')
+    logging.info(f'path: {bat_file_path}')
+    print(command)
+    print(bat_file_path)
+    yield 'data: Starting installation...\n\n'
+
+    sys.stdout.flush()
+    
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  
+            text=True,
+            bufsize=1,
+            shell=True, 
+            cwd=bat_file_path
+        )
+        
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            yield f'data: {line}\n\n'
+            logging.info(f'data: {line}\n\n')
+            sys.stdout.flush()
+        
+        process.wait()  
+        
+        if process.returncode == 0:
+            yield 'data: Pretraineds installed successfully.\n\n'
+        else:
+            yield f'data: Installation failed with return code {process.returncode}\n\n'
+        
+    except Exception as e:
+        yield f'data: Error running installation: {str(e)}\n\n'
+
+    sys.stdout.flush()
 
 # run RVC installation
 def runInstallation():
@@ -369,6 +413,10 @@ def home():
 @app.route('/pre-install', methods=['GET'])
 def pre_install():
     return Response(downloadRepo(), content_type='text/event-stream')
+
+@app.route('/pretraineds', methods=['GET'])
+def download_pretraineds():
+    return Response(downloadPretraineds(), content_type='text/event-stream')
 
 @app.route('/check-update', methods=['GET'])
 def check_update():

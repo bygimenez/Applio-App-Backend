@@ -87,7 +87,7 @@ def downloadRepo():
 
     yield 'data: Downloading RVC repository from GitHub...\n\n'
     
-    url = "https://github.com/bygimenez/rvc-cli/archive/refs/heads/main.zip"
+    url = "https://github.com/blaisewf/rvc-cli/archive/refs/heads/main.zip"
     logging.info(remove_ansi_escape_sequences("Downloading RVC repository from GitHub..."))
 
     try:
@@ -403,12 +403,23 @@ def convert(input_path, pth_path, index_path, pitch, indexRate, filterRadius):
         yield f'data: Error running conversion: {str(e)}\n\n'
         logging.error(remove_ansi_escape_sequences(f"Error running conversion: {str(e)}"))
 
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
 
 @app.route('/')
 def home():
     client_ip = request.remote_addr
     logging.info(remove_ansi_escape_sequences(f"Request from {client_ip}"))
     return jsonify({'status': 'Hello from server!'}), 200
+
+@app.get('/stop')
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
 
 @app.route('/pre-install', methods=['GET'])
 def pre_install():

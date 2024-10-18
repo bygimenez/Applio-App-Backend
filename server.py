@@ -10,6 +10,7 @@ import subprocess
 import json
 import sys
 import signal
+import threading
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -405,7 +406,7 @@ def convert(input_path, pth_path, index_path, pitch, indexRate, filterRadius):
         logging.error(remove_ansi_escape_sequences(f"Error running conversion: {str(e)}"))
 
 def shutdown_server():
-    print("Shutting down the server...")
+    print('Shutting down...')
     os.kill(os.getpid(), signal.SIGINT) 
 
 
@@ -417,8 +418,11 @@ def home():
 
 @app.get('/stop')
 def shutdown():
-    shutdown_server()
-    return 'Server shutting down...', 200
+    response = jsonify({"message": "Server stopped."})
+    
+    threading.Timer(1.0, shutdown_server).start() 
+    
+    return response, 200 
 
 @app.route('/pre-install', methods=['GET'])
 def pre_install():
